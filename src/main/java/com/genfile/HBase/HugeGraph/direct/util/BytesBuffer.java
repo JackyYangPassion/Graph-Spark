@@ -19,20 +19,11 @@
 
 package com.genfile.HBase.HugeGraph.direct.util;
 
-import com.baidu.hugegraph.backend.id.EdgeId;
-import com.baidu.hugegraph.backend.id.Id;
-import com.baidu.hugegraph.backend.id.Id.IdType;
-import com.baidu.hugegraph.backend.id.IdGenerator;
-import com.baidu.hugegraph.schema.PropertyKey;
-import com.baidu.hugegraph.type.HugeType;
-import com.baidu.hugegraph.type.define.Cardinality;
-import com.baidu.hugegraph.type.define.DataType;
+import com.genfile.HBase.HugeGraph.direct.struct.HugeType;
 import com.baidu.hugegraph.util.*;
-
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Date;
 import java.util.UUID;
 
@@ -520,107 +511,6 @@ public final class BytesBuffer extends OutputStream {
         return value;
     }
 
-    public BytesBuffer writeProperty(PropertyKey pkey, Object value) {
-        if (pkey.cardinality() == Cardinality.SINGLE) {
-            this.writeProperty(pkey.dataType(), value);
-            return this;
-        }
-
-        assert pkey.cardinality() == Cardinality.LIST ||
-                pkey.cardinality() == Cardinality.SET;
-        Collection<?> values = (Collection<?>) value;
-        this.writeVInt(values.size());
-        for (Object o : values) {
-            this.writeProperty(pkey.dataType(), o);
-        }
-        return this;
-    }
-
-    public Object readProperty(PropertyKey pkey) {
-        if (pkey.cardinality() == Cardinality.SINGLE) {
-            return this.readProperty(pkey.dataType());
-        }
-
-        assert pkey.cardinality() == Cardinality.LIST ||
-                pkey.cardinality() == Cardinality.SET;
-        int size = this.readVInt();
-        Collection<Object> values = pkey.newValue();
-        for (int i = 0; i < size; i++) {
-            values.add(this.readProperty(pkey.dataType()));
-        }
-        return values;
-    }
-
-    public void writeProperty(DataType dataType, Object value) {
-        switch (dataType) {
-            case BOOLEAN:
-                this.writeVInt(((Boolean) value) ? 1 : 0);
-                break;
-            case BYTE:
-                this.writeVInt((Byte) value);
-                break;
-            case INT:
-                this.writeVInt((Integer) value);
-                break;
-            case FLOAT:
-                this.writeFloat((Float) value);
-                break;
-            case LONG:
-                this.writeVLong((Long) value);
-                break;
-            case DATE:
-                this.writeVLong(((Date) value).getTime());
-                break;
-            case DOUBLE:
-                this.writeDouble((Double) value);
-                break;
-            case TEXT:
-                this.writeString((String) value);
-                break;
-            case BLOB:
-                byte[] bytes = value instanceof byte[] ?
-                        (byte[]) value : ((Blob) value).bytes();
-                this.writeBigBytes(bytes);
-                break;
-            case UUID:
-                UUID uuid = (UUID) value;
-                // Generally writeVLong(uuid) can't save space
-                this.writeLong(uuid.getMostSignificantBits());
-                this.writeLong(uuid.getLeastSignificantBits());
-                break;
-            default:
-                this.writeBytes(KryoUtil.toKryoWithType(value));
-                break;
-        }
-    }
-
-    public Object readProperty(DataType dataType) {
-        switch (dataType) {
-            case BOOLEAN:
-                return this.readVInt() == 1;
-            case BYTE:
-                return (byte) this.readVInt();
-            case INT:
-                return this.readVInt();
-            case FLOAT:
-                return this.readFloat();
-            case LONG:
-                return this.readVLong();
-            case DATE:
-                return new Date(this.readVLong());
-            case DOUBLE:
-                return this.readDouble();
-            case TEXT:
-                return this.readString();
-            case BLOB:
-                return Blob.wrap(this.readBigBytes());
-            case UUID:
-                return new UUID(this.readLong(), this.readLong());
-            default:
-                return KryoUtil.fromKryoWithType(this.readBytes());
-        }
-    }
-
     public BytesBuffer writeId(Id id) {
         return this.writeId(id, false);
     }
@@ -639,11 +529,11 @@ public final class BytesBuffer extends OutputStream {
                 this.writeUInt8(0x7f); // 0b01111111 means UUID
                 this.write(bytes);
                 break;
-            case EDGE:
-                // Edge Id
-                this.writeUInt8(0x7e); // 0b01111110 means EdgeId
-                this.writeEdgeId(id);
-                break;
+//            case EDGE:
+//                // Edge Id
+//                this.writeUInt8(0x7e); // 0b01111110 means EdgeId
+//                this.writeEdgeId(id);
+//                break;
             default:
                 // String Id
                 bytes = id.asBytes();
@@ -671,55 +561,6 @@ public final class BytesBuffer extends OutputStream {
         return this;
     }
 
-    public Id readId() {
-        return this.readId(false);
-    }
-
-    public Id readId(boolean big) {
-        byte b = this.read();
-        boolean number = (b & 0x80) == 0;
-        if (number) {
-            if (b == 0x7f) {
-                // UUID Id
-                return IdGenerator.of(this.read(Id.UUID_LENGTH), IdType.UUID);
-            } else if (b == 0x7e) {
-                // Edge Id
-                return this.readEdgeId();
-            } else {
-                // Number Id
-                return IdGenerator.of(this.readNumber(b));
-            }
-        } else {
-            // String Id
-            int len = b & ID_LEN_MASK;
-            if (big) {
-                int high = len << 8;
-                int low = this.readUInt8();
-                len = high + low;
-            }
-            len += 1; // restore [0, 127] to [1, 128]
-            byte[] id = this.read(len);
-            return IdGenerator.of(id, IdType.STRING);
-        }
-    }
-
-    public BytesBuffer writeEdgeId(Id id) {
-        // owner-vertex + dir + edge-label + sort-values + other-vertex
-        EdgeId edge = (EdgeId) id;
-        this.writeId(edge.ownerVertexId());
-        this.write(edge.directionCode());
-        this.writeId(edge.edgeLabelId());
-        this.writeStringWithEnding(edge.sortValues());
-        this.writeId(edge.otherVertexId());
-        return this;
-    }
-
-    public Id readEdgeId() {
-        return new EdgeId(this.readId(), EdgeId.directionFromCode(this.read()),
-                this.readId(), this.readStringWithEnding(),
-                this.readId());
-    }
-
     public BytesBuffer writeIndexId(Id id, HugeType type) {
         return this.writeIndexId(id, type, true);
     }
@@ -745,47 +586,6 @@ public final class BytesBuffer extends OutputStream {
         }
         return this;
     }
-
-//    public BinaryId readIndexId(HugeType type) {
-//        byte[] id;
-//        if (type.isRange4Index()) {
-//            // IndexLabel 4 bytes + fieldValue 4 bytes
-//            id = this.read(8);
-//        } else if (type.isRange8Index()) {
-//            // IndexLabel 4 bytes + fieldValue 8 bytes
-//            id = this.read(12);
-//        } else {
-//            assert type.isStringIndex();
-//            id = this.readBytesWithEnding();
-//        }
-//        return new BinaryId(id, IdGenerator.of(id, IdType.STRING));
-//    }
-//
-//    public BinaryId asId() {
-//        return new BinaryId(this.bytes(), null);
-//    }
-//
-//    public BinaryId parseId(HugeType type, boolean enablePartition) {
-//        if (type.isIndex()) {
-//            return this.readIndexId(type);
-//        }
-//        // Parse id from bytes
-//        if ((type.isVertex() || type.isEdge()) && enablePartition) {
-//            this.readShort();
-//        }
-//        int start = this.buffer.position();
-//        /*
-//         * Since edge id in edges table doesn't prefix with leading 0x7e,
-//         * so readId() will return the source vertex id instead of edge id,
-//         * can't call: type.isEdge() ? this.readEdgeId() : this.readId();
-//         */
-//        Id id = this.readId();
-//        int end = this.buffer.position();
-//        int len = end - start;
-//        byte[] bytes = new byte[len];
-//        System.arraycopy(this.array(), start, bytes, 0, len);
-//        return new BinaryId(bytes, id);
-//    }
 
     private void writeNumber(long val) {
         /*
@@ -947,11 +747,7 @@ public final class BytesBuffer extends OutputStream {
             case TEXT:
                 this.writeString((String) value);
                 break;
-            case BLOB:
-                byte[] bytes = value instanceof byte[] ?
-                        (byte[]) value : ((Blob) value).bytes();
-                this.writeBigBytes(bytes);
-                break;
+
             case UUID:
                 UUID uuid = (UUID) value;
                 // Generally writeVLong(uuid) can't save space
@@ -959,7 +755,7 @@ public final class BytesBuffer extends OutputStream {
                 this.writeLong(uuid.getLeastSignificantBits());
                 break;
             default:
-                this.writeBytes(KryoUtil.toKryoWithType(value));
+                //this.writeBytes(KryoUtil.toKryoWithType(value));
                 break;
         }
 

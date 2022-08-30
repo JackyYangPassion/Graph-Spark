@@ -13,16 +13,22 @@
         <scalaspark.version>2.11.8</scalaspark.version>
         <spark.version>2.4.4</spark.version>
         <hbase.version>2.2.3</hbase.version>
+        <guava.version>25.1-jre</guava.version>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
     </properties>
 
     <dependencies>
 
+<!--        <dependency>-->
+<!--            <groupId>com.baidu.hugegraph</groupId>-->
+<!--            <artifactId>hugegraph-core</artifactId>-->
+<!--            <version>0.12.0</version>-->
+<!--        </dependency>-->
         <dependency>
-            <groupId>com.baidu.hugegraph</groupId>
-            <artifactId>hugegraph-core</artifactId>
-            <version>0.12.0</version>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>${guava.version}</version>
         </dependency>
 
         <dependency>
@@ -41,6 +47,12 @@
             <groupId>org.apache.hbase</groupId>
             <artifactId>hbase-common</artifactId>
             <version>${hbase.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.google.guava</groupId>
+                    <artifactId>guava</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
 
@@ -162,6 +174,12 @@
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-sql_${scala.version}</artifactId>
             <version>${spark.version}</version>
+            <exclusions>
+            <exclusion>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+            </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
