@@ -1,7 +1,10 @@
 package com.genfile.HBase.HugeGraph.direct.util;
 
-
-import net.jpountz.lz4.*;
+import net.jpountz.lz4.LZ4BlockOutputStream;
+import net.jpountz.lz4.LZ4Compressor;
+import net.jpountz.lz4.LZ4Factory;
+import net.jpountz.lz4.LZ4FastDecompressor;
+import net.jpountz.lz4.LZ4BlockInputStream;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -27,7 +30,7 @@ public class LZ4Util {
             lz4Output.write(bytes);
             lz4Output.close();
         } catch (IOException e) {
-            //throw new BackendException("Failed to compress", e);
+            throw new HugeException("Failed to compress", e);
         }
         /*
          * If need to perform reading outside the method,
@@ -59,7 +62,7 @@ public class LZ4Util {
             }
             lzInput.close();
         } catch (IOException e) {
-            //throw new BackendException("Failed to decompress", e);
+            throw new HugeException("Failed to decompress", e);
         }
         /*
          * If need to perform reading outside the method,

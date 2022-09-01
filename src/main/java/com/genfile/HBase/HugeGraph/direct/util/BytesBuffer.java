@@ -529,11 +529,6 @@ public final class BytesBuffer extends OutputStream {
                 this.writeUInt8(0x7f); // 0b01111111 means UUID
                 this.write(bytes);
                 break;
-//            case EDGE:
-//                // Edge Id
-//                this.writeUInt8(0x7e); // 0b01111110 means EdgeId
-//                this.writeEdgeId(id);
-//                break;
             default:
                 // String Id
                 bytes = id.asBytes();
