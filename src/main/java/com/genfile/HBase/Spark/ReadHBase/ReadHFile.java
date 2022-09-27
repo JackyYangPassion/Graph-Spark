@@ -55,7 +55,6 @@ public class ReadHFile {
 
             JavaPairRDD<ImmutableBytesWritable, Result> newAPIHadoopRDD = sc.newAPIHadoopRDD(job.getConfiguration(), TableSnapshotInputFormat.class, ImmutableBytesWritable.class,Result.class);
 
-
             List<String> collect = newAPIHadoopRDD.map(
                     new Function<Tuple2<ImmutableBytesWritable, Result>, String>(){
                 public String call(Tuple2<ImmutableBytesWritable, Result> v1)
