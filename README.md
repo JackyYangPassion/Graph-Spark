@@ -61,3 +61,5 @@ http://www.opencore.com/blog/2016/10/efficient-bulk-load-of-hbase-using-spark/
 http://blog.cloudera.com/blog/2015/06/how-to-scan-salted-apache-hbase-tables-with-region-specific-key-ranges-in-mapreduce/
 
 https://github.com/fishercoder1534/HBaseExample.git 
+
+github ci test
