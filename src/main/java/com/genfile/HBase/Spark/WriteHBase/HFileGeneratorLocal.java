@@ -245,7 +245,7 @@ public class HFileGeneratorLocal implements Serializable {
                 .config(conf)
                 .getOrCreate();
         Dataset<Row> rows = null;
-        String path = "file:///Users/yangjiaqi/Documents/learnStudent/ETLWork/test.csv";
+        String path = "file:///Users/jacky/Documents/GitSourceCode/ETLPipline/test.csv";
         rows = spark.read().csv(path);
         return rows.toJavaRDD();
     }
